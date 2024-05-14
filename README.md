@@ -2,7 +2,7 @@
 
 # Advanced-Databases 
 
-### Elena Alegret, Sergi Tomàs and Júlia Orteu
+### Elena Alegret, Júlia Orteu and Sergi Tomàs
 ## Authors
 - Elena Alegret.
 - Sergi Tomàs.
