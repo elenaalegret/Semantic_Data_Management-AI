@@ -1,7 +1,4 @@
-#### BDA - GIA 
-
-
-<img src="data_preparation_pipeline/images/logo.png" alt="BCN Map4Tourism Logo" width="150">
+#### BDA - GIA
 
 # Advanced-Databases 
 
