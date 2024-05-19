@@ -1,6 +1,6 @@
 #### BDA - GIA
 
-# Advanced-Databases 
+# Advanced-Databases: Semantic Data Management
 
 ### Elena Alegret, Júlia Orteu and Sergi Tomàs
 ## Authors
