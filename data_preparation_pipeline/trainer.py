@@ -12,15 +12,13 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def train_model(kg_train, kg_val=None, emb_dim=100, n_epochs=1000, b_size=32768, lr=0.0004, margin=0.5):
     """
     Trains an embedding model using torchKGE with a custom training loop.
-
-    :param kg_train: KnowledgeGraph, the training knowledge graph
-    :param kg_val: KnowledgeGraph, the validation knowledge graph (optional)
-    :param emb_dim: int, the dimension of the embeddings
-    :param n_epochs: int, the number of epochs to train
-    :param b_size: int, the batch size for training
-    :param lr: float, the learning rate
-    :param margin: float, the margin value for the TransE loss function
-    :return: None
+        :param kg_train: KnowledgeGraph, the training knowledge graph
+        :param kg_val: KnowledgeGraph, the validation knowledge graph (optional)
+        :param emb_dim: int, the dimension of the embeddings
+        :param n_epochs: int, the number of epochs to train
+        :param b_size: int, the batch size for training
+        :param lr: float, the learning rate
+        :param margin: float, the margin value for the TransE loss function
     """
     # Define the embedding model
     model = TransEModel(emb_dim, kg_train.n_ent, kg_train.n_rel, dissimilarity_type='L2')
@@ -33,7 +31,7 @@ def train_model(kg_train, kg_val=None, emb_dim=100, n_epochs=1000, b_size=32768,
 
     # Define the negative sampler and dataloader
     sampler = BernoulliNegativeSampler(kg_train)
-    dataloader = DataLoader(kg_train, batch_size=b_size, use_cuda='')
+    dataloader = DataLoader(kg_train, batch_size=b_size, use_cuda=device)
 
     # Training loop
     iterator = tqdm(range(n_epochs), unit='epoch')
@@ -60,7 +58,7 @@ def train_model(kg_train, kg_val=None, emb_dim=100, n_epochs=1000, b_size=32768,
         if kg_val is not None:
             model.eval()
             val_loss = 0.0
-            val_loader = DataLoader(kg_val, batch_size=b_size, use_cuda='all')
+            val_loader = DataLoader(kg_val, batch_size=b_size, use_cuda=device)
             for i, batch in enumerate(val_loader):
                 h, t, r = batch[0], batch[1], batch[2]
                 n_h, n_t = sampler.corrupt_batch(h, t, r)

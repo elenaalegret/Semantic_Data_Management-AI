@@ -7,11 +7,12 @@ from torchkge.data_structures import KnowledgeGraph
 from rdflib import Graph
 import pandas as pd
 import trainer
+import os
 
 
 # Load the RDF graph
 g = Graph()
-g.parse("./../data_preparation_pipeline/RDFGraph.ttl", format="ttl")
+g.parse("./../data/explotation_zone/RDFGraph.ttl", format="ttl")
 
 # Extract triples in order to create the Knowledge graph
 print('Creating the triples...')
@@ -19,15 +20,19 @@ triples = []
 for s, p, o in g:
     triples.append((str(s), str(p), str(o)))
 
+directory = './../data/explotation_zone'  # Cambia esto a la ruta deseada
+os.makedirs(directory, exist_ok=True)
+file_path = os.path.join(directory, 'RDFTriples.txt')
+
 # Save triples into a file
-with open('RDFTriples.txt', 'w') as f:
+with open(file_path, 'w') as f:
     for triple in triples:
         f.write("\t".join(triple) + "\n")
-
 print('Done!')
 print()
-print('Creating the Knowledge graph...')
 
+        
+print('Creating the Knowledge graph...')
 # Convert into DataFrame and reorganize col to torchKGE format
 data = pd.DataFrame(triples, columns=['from', 'rel', 'to'])
 data = data[['from', 'to', 'rel']]
