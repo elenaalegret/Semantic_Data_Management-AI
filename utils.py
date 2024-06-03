@@ -11,6 +11,7 @@ from networkx.drawing.nx_agraph import graphviz_layout
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud
 import unidecode
+from pyspark.sql.functions import col, lit, create_map
 
 # ------------------------ Functions used in the Quality Pipeline ------------------------
 def plot_numeric_histograms(df, numeric_columns):
@@ -44,7 +45,7 @@ def plot_categorical_distribution(df, column, ax, color):
     ax.tick_params(axis='x', rotation=90)
 
 def generate_word_cloud(values, title):
-    text = " ".join(value.lower() for value in values) # Unifquem en minuscuels y sense accents x treure + insides
+    text = " ".join(unidecode(value).lower() for value in values) # Unify lower and without accents + insides
     wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
     plt.figure(figsize=(10, 6))
     plt.imshow(wordcloud, interpolation='bilinear')
@@ -54,11 +55,22 @@ def generate_word_cloud(values, title):
 
 
 
-
-
-
-
 # ------------------------ Functions used in the Explotation Pipeline ------------------------
+def calculate_index_criminality(df_criminal):
+    neighbourhoods = [row['neighbourhood'] for row in df_criminal.select('neighbourhood').distinct().collect()]
+    total_crimes = df_criminal.count()
+    total_crimes_per_neighbourhood = {neighbourhood: 0 for neighbourhood in neighbourhoods}
+
+    for neighbourhood in neighbourhoods:
+        crimes_in_neighbourhood = df_criminal.filter(col('neighbourhood') == neighbourhood).count()
+        if total_crimes > 0: 
+            total_crimes_per_neighbourhood[neighbourhood] = crimes_in_neighbourhood / total_crimes
+
+    mapping_expr = create_map(*[item for sublist in [[lit(k), lit(v)] for k, v in total_crimes_per_neighbourhood.items()] for item in sublist])
+    df_criminal = df_criminal.withColumn('criminality_index', mapping_expr.getItem(col('neighbourhood')))
+    return df_criminal
+
+
 def add_criminal_instances(g, loc, inc, ex, df):
     """
     Add criminal instances to the RDF graph
