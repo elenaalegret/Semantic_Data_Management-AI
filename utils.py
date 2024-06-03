@@ -15,6 +15,11 @@ from pyspark.sql.functions import col, lit, create_map
 
 # ------------------------ Functions used in the Quality Pipeline ------------------------
 def plot_numeric_histograms(df, numeric_columns):
+    """
+    Plot histograms for numeric columns in the DataFrame.
+        :param df: The DataFrame containing the data.
+        :param numeric_columns: A list of column names representing numeric variables.
+    """
     colors = ['skyblue', 'salmon', 'lightgreen', 'orange']
     
     fig, axs = plt.subplots(2, 2, figsize=(12, 10))  
@@ -35,6 +40,13 @@ def plot_numeric_histograms(df, numeric_columns):
     plt.show()
 
 def plot_categorical_distribution(df, column, ax, color):
+    """
+    Plot the distribution of a categorical variable.
+        :param df: The DataFrame containing the data.
+        :param column: The name of the column representing the categorical variable.
+        :param ax: The axis object for plotting.
+        :param color: The color for the bars in the plot.
+    """
     counts = df.groupBy(column).count().orderBy(column).collect()
     labels = [row[column] for row in counts]
     frequencies = [row['count'] for row in counts]
@@ -45,6 +57,11 @@ def plot_categorical_distribution(df, column, ax, color):
     ax.tick_params(axis='x', rotation=90)
 
 def generate_word_cloud(values, title):
+    """
+    Generate and display a word cloud based on input values.
+        :param values: A list of strings representing words.
+        :param title: The title for the word cloud.
+    """
     text = " ".join(unidecode(value).lower() for value in values) # Unify lower and without accents + insides
     wordcloud = WordCloud(width=800, height=400, background_color='white').generate(text)
     plt.figure(figsize=(10, 6))
@@ -57,6 +74,11 @@ def generate_word_cloud(values, title):
 
 # ------------------------ Functions used in the Explotation Pipeline ------------------------
 def calculate_index_criminality(df_criminal):
+    """
+    Calculate the criminality index for each neighbourhood based on the provided criminal dataset.
+        :param df_criminal: A DataFrame containing criminal data, with columns including 'neighbourhood'.
+    :return: A DataFrame with an additional column 'criminality_index' representing the criminality index for each neighbourhood.
+    """
     neighbourhoods = [row['neighbourhood'] for row in df_criminal.select('neighbourhood').distinct().collect()]
     total_crimes = df_criminal.count()
     total_crimes_per_neighbourhood = {neighbourhood: 0 for neighbourhood in neighbourhoods}
@@ -81,35 +103,52 @@ def add_criminal_instances(g, loc, inc, ex, df):
         :param df: DataFrame containing criminal data
     """
     for idx, row in df.iterrows():
-        district = loc[row["area_basica_policial"].replace(" ", "_")] # Ajusted to not have blanck spaces
+        district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
+        location = loc[f'location_{idx}']
         g.add((district, RDF.type, loc.District))
-        g.add((district, RDFS.label, Literal(row["area_basica_policial"], datatype=XSD.string)))
-        
+        g.add((location, RDF.type, loc.Location))
+        g.add((location, loc.isDistrict, district))
+        g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
+
         # Incident instance
         incident = ex[f'incident_{idx}']
         g.add((incident, RDF.type, inc.Incident))
         g.add((incident, inc.happenedAt, district))  # Relates to the district
-        g.add((incident, inc.year, Literal(row['any'], datatype=XSD.integer)))
-        g.add((incident, inc.numberMonth, Literal(row['num_mes'], datatype=XSD.integer)))
+        #g.add((incident, inc.year, Literal(row['any'], datatype=XSD.integer)))
+        #g.add((incident, inc.numberMonth, Literal(row['num_mes'], datatype=XSD.integer)))
+        #g.add((incident, inc.typePenalCode, Literal(row['tipus_de_fet_codi_penal'], datatype=XSD.string)))
+        #g.add((incident, inc.wherePenalCode, Literal(row['tipus_de_lloc_dels_fets'], datatype=XSD.string)))
         g.add((incident, inc.nameMonth, Literal(row['nom_mes'], datatype=XSD.string)))
-        g.add((incident, inc.typePenalCode, Literal(row['tipus_de_fet_codi_penal'], datatype=XSD.string)))
-        g.add((incident, inc.wherePenalCode, Literal(row['tipus_de_lloc_dels_fets'], datatype=XSD.string)))
-        g.add((incident, inc.incidentType, Literal(row['ambit_fet'], datatype=XSD.string)))
+        g.add((incident, inc.incidentType, Literal(row['type_crime'], datatype=XSD.string)))
         g.add((incident, inc.numberVictims, Literal(row['nombre_victimes'], datatype=XSD.float)))
-        break
+        g.add((incident, inc.criminalityIndex, Literal(row['criminality_index'], datatype=XSD.float)))
 
-def add_airbnb_instances(g, apt, df):
+def add_airbnb_instances(g, loc, apt, df):
     """
     Add Airbnb instances to the RDF graph
         :param g: RDF graph
+        :param loc: Namespace for location
         :param apt: Namespace for apartment
         :param df: DataFrame containing Airbnb data
     """
     for idx, row in df.iterrows():
+        district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
+        location = loc[f'location_{idx}']
+        g.add((district, RDF.type, loc.District))
+        g.add((location, RDF.type, loc.Location))
+        g.add((location, loc.isDistrict, district))
+        g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
+        g.add((location, loc.latitude, Literal(row["latitude"], datatype=XSD.float)))
+        g.add((location, loc.longitude, Literal(row["longitude"], datatype=XSD.float)))
+
+        # Airbnb instance
         apartment = apt[f'apartment_{idx}']
         g.add((apartment, RDF.type, apt.Apartment))
-        g.add((apartment, apt.criminalityIndex, Literal(row['criminality_index'], datatype=XSD.float)))
-        g.add((apartment, apt.extraPeople, Literal(row['extra_people'], datatype=XSD.integer)))
+        g.add((apartment, apt.name, Literal(row['name'], datatype=XSD.string)))
+        g.add((apartment, apt.hostId, Literal(row['host_id'], datatype=XSD.integer)))
+        g.add((apartment, apt.hostSince, Literal(row['host_since'], datatype=XSD.string)))
+        g.add((apartment, apt.hostTotalListingsCount, Literal(row['host_total_listings_count'], datatype=XSD.integer)))
+        g.add((apartment, apt.hostVerifications, Literal(row['host_verifications'], datatype=XSD.string)))
         g.add((apartment, apt.propertyType, Literal(row['property_type'], datatype=XSD.string)))
         g.add((apartment, apt.roomType, Literal(row['room_type'], datatype=XSD.string)))
         g.add((apartment, apt.accommodates, Literal(row['accommodates'], datatype=XSD.integer)))
@@ -121,13 +160,17 @@ def add_airbnb_instances(g, apt, df):
         g.add((apartment, apt.securityDeposit, Literal(row['security_deposit'], datatype=XSD.float)))
         g.add((apartment, apt.cleaningFee, Literal(row['cleaning_fee'], datatype=XSD.float)))
         g.add((apartment, apt.guestsIncluded, Literal(row['guests_included'], datatype=XSD.integer)))
-        g.add((apartment, apt.cancellationPolicy, Literal(row['cancellation_policy'], datatype=XSD.string)))
-        #g.add((apartment, apt.reviewScoresLocation, Literal(row['review_scores_location'], datatype=XSD.integer)))
+        g.add((apartment, apt.extraPeople, Literal(row['extra_people'], datatype=XSD.integer)))
+        g.add((apartment, apt.minimumNights, Literal(row['minimum_nights'], datatype=XSD.integer)))
+        g.add((apartment, apt.maximumNights, Literal(row['maximum_nights'], datatype=XSD.integer)))
+        g.add((apartment, apt.maximumNights, Literal(row['maximum_nights'], datatype=XSD.integer)))
+        g.add((apartment, apt.numberOfReviews, Literal(row['number_of_reviews'], datatype=XSD.string)))
 
-def add_entertainment_instances(g, ent, df, identifier):
+def add_entertainment_instances(g, loc, ent, df, identifier):
     """
     Add entertainment instances to the RDF graph
         :param g: RDF graph
+        :param loc: Namespace for location
         :param ent: Namespace for entertainment
         :param df: DataFrame containing entertainment data
         :param identifier: Unique identifier to differentiate instances from different DataFrames
@@ -135,10 +178,25 @@ def add_entertainment_instances(g, ent, df, identifier):
     for idx, row in df.iterrows():
         entertainment = ent[f'entertainment_{identifier}_{idx}']
         g.add((entertainment, RDF.type, ent.Entertainment))
-        g.add((entertainment, ent.name, Literal(row['name'], datatype=XSD.string)))
-        g.add((entertainment, ent.adress, Literal(row['address_obj_address_string'], datatype=XSD.string)))
-        g.add((entertainment, ent.typeEnt, Literal(row['type'], datatype=XSD.string)))
-
+        g.add((entertainment, ent.locationID, Literal(row['location_id'], datatype=XSD.integer)))
+        
+        if identifier == 0: # Restaurant
+            district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
+            location = loc[f'location_{identifier}_{idx}']
+            g.add((district, RDF.type, loc.District))
+            g.add((location, RDF.type, loc.Location))
+            g.add((location, loc.isDistrict, district))
+            g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
+            g.add((location, loc.latitude, Literal(row["latitude"], datatype=XSD.float)))
+            g.add((location, loc.longitude, Literal(row["longitude"], datatype=XSD.float)))
+            g.add((entertainment, ent.name, Literal(row['name'], datatype=XSD.string)))
+            g.add((entertainment, ent.typeEnt, Literal(row['type'], datatype=XSD.string)))
+        
+        elif identifier == 1: # Review
+            g.add((entertainment, ent.rating, Literal(row['rating'], datatype=XSD.float)))
+            g.add((entertainment, ent.text, Literal(row['text'], datatype=XSD.string)))
+            g.add((entertainment, ent.title, Literal(row['title'], datatype=XSD.string)))
+            g.add((entertainment, ent.type, Literal('review', datatype=XSD.string)))
 
 def print_random_instance(g, class_type):
     """
