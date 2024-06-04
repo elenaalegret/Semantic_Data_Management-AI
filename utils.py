@@ -2,7 +2,7 @@
 ## RDF Graph Functions
 
 # Import 
-from rdflib import Literal
+from rdflib import Literal, URIRef
 from rdflib.namespace import RDF, RDFS, XSD
 import random
 import networkx as nx
@@ -104,10 +104,10 @@ def add_criminal_instances(g, loc, inc, ex, df):
     """
     for idx, row in df.iterrows():
         district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
-        location = loc[f'location_{idx}']
+        location = loc[f'location_inc_{idx}']
         g.add((district, RDF.type, loc.District))
         g.add((location, RDF.type, loc.Location))
-        g.add((location, loc.isDistrict, district))
+        g.add((location, loc.isinDistrict, district))
         g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
 
         # Incident instance
@@ -133,21 +133,22 @@ def add_airbnb_instances(g, loc, apt, df):
     """
     for idx, row in df.iterrows():
         district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
-        location = loc[f'location_{idx}']
+        location = loc[f'location_apt_{idx}']
         g.add((district, RDF.type, loc.District))
         g.add((location, RDF.type, loc.Location))
-        g.add((location, loc.isDistrict, district))
+        g.add((location, loc.isinDistrict, district))
         g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
-        g.add((location, loc.latitude, Literal(row["latitude"], datatype=XSD.float)))
-        g.add((location, loc.longitude, Literal(row["longitude"], datatype=XSD.float)))
+        g.add((location, loc.Latitude, Literal(row["latitude"], datatype=XSD.float)))
+        g.add((location, loc.Longitude, Literal(row["longitude"], datatype=XSD.float)))
 
         # Airbnb instance
         apartment = apt[f'apartment_{idx}']
         g.add((apartment, RDF.type, apt.Apartment))
+        g.add((apartment, apt.hasLocation, location))
         g.add((apartment, apt.name, Literal(row['name'], datatype=XSD.string)))
         g.add((apartment, apt.hostId, Literal(row['host_id'], datatype=XSD.integer)))
         g.add((apartment, apt.hostSince, Literal(row['host_since'], datatype=XSD.string)))
-        g.add((apartment, apt.hostTotalListingsCount, Literal(row['host_total_listings_count'], datatype=XSD.integer)))
+        g.add((apartment, apt.hostTotalListingsCount, Literal(row['host_total_listings_count'], datatype=XSD.float)))
         g.add((apartment, apt.hostVerifications, Literal(row['host_verifications'], datatype=XSD.string)))
         g.add((apartment, apt.propertyType, Literal(row['property_type'], datatype=XSD.string)))
         g.add((apartment, apt.roomType, Literal(row['room_type'], datatype=XSD.string)))
@@ -163,8 +164,9 @@ def add_airbnb_instances(g, loc, apt, df):
         g.add((apartment, apt.extraPeople, Literal(row['extra_people'], datatype=XSD.integer)))
         g.add((apartment, apt.minimumNights, Literal(row['minimum_nights'], datatype=XSD.integer)))
         g.add((apartment, apt.maximumNights, Literal(row['maximum_nights'], datatype=XSD.integer)))
-        g.add((apartment, apt.maximumNights, Literal(row['maximum_nights'], datatype=XSD.integer)))
         g.add((apartment, apt.numberOfReviews, Literal(row['number_of_reviews'], datatype=XSD.string)))
+        g.add((apartment, apt.cancellationPolicy, Literal(row['cancellation_policy'], datatype=XSD.string)))
+
 
 def add_entertainment_instances(g, loc, ent, df, identifier):
     """
@@ -180,39 +182,63 @@ def add_entertainment_instances(g, loc, ent, df, identifier):
         g.add((entertainment, RDF.type, ent.Entertainment))
         g.add((entertainment, ent.locationID, Literal(row['location_id'], datatype=XSD.integer)))
         
-        if identifier == 0: # Restaurant
+        if identifier == 'loc': # Restaurant
             district = loc[row["neighbourhood"].replace(" ", "_").replace(",", "").replace(".", "")]
             location = loc[f'location_{identifier}_{idx}']
             g.add((district, RDF.type, loc.District))
             g.add((location, RDF.type, loc.Location))
-            g.add((location, loc.isDistrict, district))
+            g.add((location, loc.isinDistrict, district))
             g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
             g.add((location, loc.latitude, Literal(row["latitude"], datatype=XSD.float)))
             g.add((location, loc.longitude, Literal(row["longitude"], datatype=XSD.float)))
+            g.add((entertainment, ent.hasLocation, location))
             g.add((entertainment, ent.name, Literal(row['name'], datatype=XSD.string)))
             g.add((entertainment, ent.typeEnt, Literal(row['type'], datatype=XSD.string)))
         
-        elif identifier == 1: # Review
+        elif identifier == 'rev': # Review
             g.add((entertainment, ent.rating, Literal(row['rating'], datatype=XSD.float)))
             g.add((entertainment, ent.text, Literal(row['text'], datatype=XSD.string)))
             g.add((entertainment, ent.title, Literal(row['title'], datatype=XSD.string)))
             g.add((entertainment, ent.type, Literal('review', datatype=XSD.string)))
 
-def print_random_instance(g, class_type):
+def print_random_detailed_instance(g, class_type):
     """
-    Objective: Print a random instance of a given class from the RDF graph
+    Print a random instance of a given class from the RDF graph, including details of related instances.
         :param g: RDF graph
-        :param class_type: RDF class type to filter instances
+        :param class_type: URIRef of the RDF class to filter instances
     """
+    # Retrieve all instances of the specified class
     instances = list(g.subjects(RDF.type, class_type))
     if not instances:
         print(f"No instances of type {class_type} found in the graph.")
         return
-    
+
+    # Select one random instance from the list
     random_instance = random.choice(instances)
     print(f"\nRandom instance of type {class_type}: {random_instance}")
+
+    # Print properties of the selected instance
+    print("Properties of the selected instance:")
     for s, p, o in g.triples((random_instance, None, None)):
-        print(f"  {p.split('/')[-1]}: {o}")
+        if isinstance(o, Literal):
+            print(f"  {p.n3(g.namespace_manager)}: {o} (Literal)")
+        elif isinstance(o, URIRef):
+            print(f"  {p.n3(g.namespace_manager)}: {o.n3(g.namespace_manager)} (URI)")
+        else:
+            print(f"  {p.n3(g.namespace_manager)}: {o}")
+
+    # Optionally, follow and print properties of related instances
+    print("\nRelated instances and their properties:")
+    for p, o in g.predicate_objects(random_instance):
+        if isinstance(o, URIRef):  # Check if the object is a URI to follow to related instances
+            print(f"\nProperties of {o.n3(g.namespace_manager)}:")
+            for s, p2, o2 in g.triples((o, None, None)):
+                if isinstance(o2, Literal):
+                    print(f"  {p2.n3(g.namespace_manager)}: {o2} (Literal)")
+                elif isinstance(o2, URIRef):
+                    print(f"  {p2.n3(g.namespace_manager)}: {o2.n3(g.namespace_manager)} (URI)")
+                else:
+                    print(f"  {p2.n3(g.namespace_manager)}: {o2}")
 
 
 def visualize_rdf_graph(g, output_file="./..data/explotation_zone/rdf_schema.png"):
