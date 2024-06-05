@@ -146,7 +146,7 @@ def add_airbnb_instances(g, loc, apt, df, mode = None):
         g.add((apartment, RDF.type, apt.Apartment))
         g.add((apartment, apt.hasLocation, location))
 
-        if mode is not None:
+        if mode is None:
             g.add((apartment, apt.name, Literal(row['name'], datatype=XSD.string)))
             g.add((apartment, apt.hostId, Literal(row['host_id'], datatype=XSD.integer)))
             g.add((apartment, apt.hostSince, Literal(row['host_since'], datatype=XSD.string)))
