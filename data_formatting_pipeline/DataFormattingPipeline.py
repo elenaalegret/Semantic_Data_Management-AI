@@ -45,7 +45,6 @@ df_airbnb_listings = df_airbnb_listings.withColumn("host_verifications", concat_
 df_airbnb_listings = df_airbnb_listings.withColumn("amenities", concat_ws(", ", col("amenities")))
 df_airbnb_listings = df_airbnb_listings.withColumn("features", concat_ws(", ", col("features")))
 
-
 ## Write on the tables 
 print('Writting tables...')
 jdbc_url = 'jdbc:duckdb:./../data/formatted_zone/barcelona.db'

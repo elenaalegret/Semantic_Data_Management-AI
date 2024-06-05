@@ -1,6 +1,6 @@
 # Create the knowledge graph
 
-#pip install torchkge
+#!pip install torchkge
 
 # Import
 from torchkge.data_structures import KnowledgeGraph
@@ -20,7 +20,7 @@ triples = []
 for s, p, o in g:
     triples.append((str(s), str(p), str(o)))
 
-directory = './../data/explotation_zone'  # Cambia esto a la ruta deseada
+directory = './../data/explotation_zone'  
 os.makedirs(directory, exist_ok=True)
 file_path = os.path.join(directory, 'RDFTriples.txt')
 
