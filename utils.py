@@ -123,7 +123,7 @@ def add_criminal_instances(g, loc, inc, ex, df):
         g.add((incident, inc.numberVictims, Literal(row['nombre_victimes'], datatype=XSD.float)))
         g.add((incident, inc.criminalityIndex, Literal(row['criminality_index'], datatype=XSD.float)))
 
-def add_airbnb_instances(g, loc, apt, df):
+def add_airbnb_instances(g, loc, apt, df, mode = None):
     """
     Add Airbnb instances to the RDF graph
         :param g: RDF graph
@@ -145,11 +145,17 @@ def add_airbnb_instances(g, loc, apt, df):
         apartment = apt[f'apartment_{idx}']
         g.add((apartment, RDF.type, apt.Apartment))
         g.add((apartment, apt.hasLocation, location))
-        g.add((apartment, apt.name, Literal(row['name'], datatype=XSD.string)))
-        g.add((apartment, apt.hostId, Literal(row['host_id'], datatype=XSD.integer)))
-        g.add((apartment, apt.hostSince, Literal(row['host_since'], datatype=XSD.string)))
+
+        if mode is not None:
+            g.add((apartment, apt.name, Literal(row['name'], datatype=XSD.string)))
+            g.add((apartment, apt.hostId, Literal(row['host_id'], datatype=XSD.integer)))
+            g.add((apartment, apt.hostSince, Literal(row['host_since'], datatype=XSD.string)))
+            g.add((apartment, apt.hostVerifications, Literal(row['host_verifications'], datatype=XSD.string)))
+            g.add((apartment, apt.price, Literal(row['price'], datatype=XSD.float)))
+        else:
+            g.add((apartment, apt.price_discretized, Literal(row['price_discretized'], datatype=XSD.string)))
+
         g.add((apartment, apt.hostTotalListingsCount, Literal(row['host_total_listings_count'], datatype=XSD.float)))
-        g.add((apartment, apt.hostVerifications, Literal(row['host_verifications'], datatype=XSD.string)))
         g.add((apartment, apt.propertyType, Literal(row['property_type'], datatype=XSD.string)))
         g.add((apartment, apt.roomType, Literal(row['room_type'], datatype=XSD.string)))
         g.add((apartment, apt.accommodates, Literal(row['accommodates'], datatype=XSD.integer)))
@@ -157,7 +163,6 @@ def add_airbnb_instances(g, loc, apt, df):
         g.add((apartment, apt.bedrooms, Literal(row['bedrooms'], datatype=XSD.integer)))
         g.add((apartment, apt.beds, Literal(row['beds'], datatype=XSD.integer)))
         g.add((apartment, apt.bedType, Literal(row['bed_type'], datatype=XSD.string)))
-        g.add((apartment, apt.price, Literal(row['price'], datatype=XSD.float)))
         g.add((apartment, apt.securityDeposit, Literal(row['security_deposit'], datatype=XSD.float)))
         g.add((apartment, apt.cleaningFee, Literal(row['cleaning_fee'], datatype=XSD.float)))
         g.add((apartment, apt.guestsIncluded, Literal(row['guests_included'], datatype=XSD.integer)))
