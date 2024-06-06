@@ -8,7 +8,6 @@
 # - Dynamic Map Visualization: Utilizes Folium to plot interactive maps showcasing Airbnb listings, restaurants, 
 #                              and other attractions with custom markers based on user selections.
 # - Data-Driven Insights: Offers a filtering system for selecting neighborhoods and attractions based on user preferences, including ratings and types of establishments.
-# - Crime Rate Analysis: Processes and displays crime data to inform tourists of the safety levels in different neighborhoods, helping them make safer travel decisions.
 # - Responsive Interface: Built with Streamlit, the tool includes a custom header with a logo, sidebar configurations for neighborhood selection, 
 #                         and sliders for customizing data representation.
 ##########################################################################################################################################################################
