@@ -1,4 +1,5 @@
 #### BDA - GIA
+<img src="App-Data_Analysis_pipeline1/images/logo.png" alt="BCN Map4Tourism Logo" width="150">
 
 # Advanced-Databases: Semantic Data Management
 
@@ -11,9 +12,23 @@
 ## Project Description
 This project focuses on collecting and formatting data from diverse sources, specifically targeting Airbnb listings and criminal activity datasets. Our goal is to facilitate data analysis and insights by preparing and organizing data efficiently. The repository includes raw data collection scripts, metadata documentation, and a data formatting pipeline.
 
+## BCN Map4Tourism Application
+This application was originally developed using PySpark for data processing and filtering. In the new version, **we have migrated the filtering and querying operations to SPARQL to leverage a graph-based RDF approach**.
+
+To run the application, navigate to the directory where the `app.py` file is located (`~/App-Data_Analysis_pipeline1` in this case) and execute the following command in your terminal:
+
+```
+streamlit run app.py
+```
+
+This command will start the Streamlit application defined in the `app.py` file. You can then access the application through your web browser by following the URL provided in the terminal output (typically `http://localhost:8501`).
+
+> To access the last project interactive interface integrated into your web browser, visit the [BCN Map4Tourism interface](https://bcnmap4tourismin.streamlit.app).
+
 ## Directory Structure
 ```
 .
+├── REPORT.pdf
 ├── README.md
 ├── App-Data_Analysis_pipeline1
 │   ├── SPARQL_queries.py
