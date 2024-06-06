@@ -144,7 +144,6 @@ Scripts and metadata for data collection:
 - **sanity_check.py**: Script used to perform initial checks on data to ensure its integrity before it enters the formatting pipeline.
 
 ### data_quality_pipeline
-### data_quality_pipeline
 Scripts and utilities designed to assess and improve the quality of data:
 - **1-CriminalQualityPipeline.ipynb**: Jupyter Notebook for assessing and improving the quality of criminal activity data.
 - **2-AirbnbQualityPipeline.ipynb**: Jupyter Notebook for assessing and improving the quality of Airbnb listings data.
