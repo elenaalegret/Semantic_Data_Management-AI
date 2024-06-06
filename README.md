@@ -107,7 +107,7 @@ This command will start the Streamlit application defined in the `app.py` file. 
 
 ```
 ### REPORT
-- A technical explanation of the project can be found in the `REPORT.pdf
+- A technical explanation of the project can be found in the `REPORT.pdf`
 
 ### data
 - **landing_zone**: Contains raw data files as they are collected from the data sources.
