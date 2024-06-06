@@ -110,6 +110,7 @@ def add_criminal_instances(g, loc, inc, ex, df):
         g.add((location, loc.isinDistrict, district))
         g.add((district, RDFS.label, Literal(row["neighbourhood"], datatype=XSD.string)))
 
+
         # Incident instance
         incident = ex[f'incident_{idx}']
         g.add((incident, RDF.type, inc.Incident))
@@ -121,7 +122,8 @@ def add_criminal_instances(g, loc, inc, ex, df):
         g.add((incident, inc.nameMonth, Literal(row['nom_mes'], datatype=XSD.string)))
         g.add((incident, inc.incidentType, Literal(row['type_crime'], datatype=XSD.string)))
         g.add((incident, inc.numberVictims, Literal(row['nombre_victimes'], datatype=XSD.float)))
-        g.add((incident, inc.criminalityIndex, Literal(row['criminality_index'], datatype=XSD.float)))
+        #g.add((incident, inc.criminalityIndex, Literal(row['criminality_index'], datatype=XSD.float)))
+        g.add((district, loc.criminalityIndex, Literal(row["criminality_index"], datatype=XSD.float)))
 
 def add_airbnb_instances(g, loc, apt, df, mode = None):
     """
@@ -199,6 +201,8 @@ def add_entertainment_instances(g, loc, ent, df, identifier):
             g.add((entertainment, ent.hasLocation, location))
             g.add((entertainment, ent.name, Literal(row['name'], datatype=XSD.string)))
             g.add((entertainment, ent.typeEnt, Literal(row['type'], datatype=XSD.string)))
+            g.add((entertainment, ent.avgrating, Literal(row['avg_rating'], datatype=XSD.float)))
+
         
         elif identifier == 'rev': # Review
             g.add((entertainment, ent.rating, Literal(row['rating'], datatype=XSD.float)))

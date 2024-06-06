@@ -2,13 +2,13 @@
 
 #!pip install torchkge
 
-# Import
+# Import___________________________________________
 from torchkge.data_structures import KnowledgeGraph
 from rdflib import Graph
 import pandas as pd
 import trainer
 import os
-
+#___________________________________________________
 
 # Load the RDF graph
 g = Graph()

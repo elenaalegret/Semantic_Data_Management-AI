@@ -17,7 +17,7 @@
 import folium
 from streamlit_folium import folium_static
 import numpy as np
-from DataPreparationPipeline import *
+from SPARQL_queries import *
 
 # Header section: Displays a custom header with a logo and main title on the Streamlit app
 st.write("""
@@ -28,8 +28,11 @@ st.write("""
 """.format(get_base64_of_bin_file("images/logo.png")), unsafe_allow_html=True)
 st.write("Welcome! Choose your neighborhood 🏘️ and explore local restaurants alongside crime rate \n statistics for a more informed experience. 😊🍽️📊")
 
+#################################
+##   Sidebar configuration    ###
+#################################
 
-# Sidebar configuration: Allows users to select different neighborhoods for visualization
+# --> Allows users to select different neighborhoods and options for visualization 
 selected_neighborhoods = {}
 with st.sidebar.expander("Neighborhoods"):
     col1, col2 = st.columns([2, 1])
@@ -42,19 +45,32 @@ with st.sidebar.expander("Neighborhoods"):
 # !!!!!!Attention!!!!!_____________________________________________________________________________________
 # Limited computational resources may restrict rendering capabilities locally
 # Additional resources would enable processing of larger datasets.
-# --> Constarint less apartments for visualization in local:  num_samples/1000 -- only 10% of the total data
-# --> If you have resources descoment the indicated line
+# --> Less apartments for visualization in local:  num_samples/1000 -- only 10% of the total data
+# --> If you have resources comment the indicated line
 #__________________________________________________________________________________________________________
 
 # Data sampling and filtering: Reduces dataset based on user-selected percentage for performance optimization
 num_samples = st.sidebar.slider("Percentage of Locations Displayed", min_value=1, max_value=100, value=20)
-sampled_data = df_airbnb.sample(withReplacement=False, fraction=num_samples/1000, seed=42) # In case of wanting more resources change 1000 to 100
-sampled_locations = df_locations.sample(withReplacement=False, fraction=num_samples/100, seed=42)
 
-# Filters the sampled data based on neighborhoods selected by the user
-sampled_data = filter_apartments(sampled_data)
-filtered_data = sampled_data[sampled_data['neighbourhood'].isin([neighborhood for neighborhood, selected in selected_neighborhoods.items() if selected])]
-filtered_locations = sampled_locations[sampled_locations['neighbourhood'].isin([neighborhood for neighborhood, selected in selected_neighborhoods.items() if selected])]
+with st.sidebar.expander(" 🧹 Apartments Filtration"):
+    price_max = st.sidebar.slider("💰 Maximum Price per Night", min_value=0, max_value=1000, value=80)
+    more_filters_active = st.sidebar.checkbox("More Filtration")
+    if more_filters_active:
+        room_types = ['Entire home/apt', 'Private room', 'Shared room']  
+        selected_room_types = st.sidebar.multiselect("Room Types", room_types, default=room_types)
+        bathrooms_min = st.sidebar.slider("Minimum Bathrooms", min_value=0, max_value=5, value=0)
+        beds_min = st.sidebar.slider("Minimum Beds", min_value=0, max_value=11, value=0)
+        min_nights = st.sidebar.slider("Minimum Nights", min_value=0, max_value=365, value=0)
+    else:
+        selected_room_types = None
+        bathrooms_min = None
+        beds_min = None
+        min_nights = None
+
+# -->  Call the query fucntion
+df_filtered_apartments = filter_apartments(selected_neighborhoods, price_max, selected_room_types, bathrooms_min, beds_min, min_nights, num_samples)
+
+
 
 # Display the number of apartments & Locations
 st.markdown(f'''
@@ -68,113 +84,40 @@ st.markdown(f'''
     color: #ff9832;
     background-color: #ffffff;
     box-shadow: 2px 2px 12px rgba(0,0,0,0.1);">
-    <b> Displayed Apartments </b> {filtered_data.count()}
+    <b> Displayed Apartments </b> {df_filtered_apartments.shape[0]}
 </div>
 ''', unsafe_allow_html=True)
 
 # Map visualization: Configures and displays a map with markers for Airbnb listings and optionally restaurants/attractions
-show_restaurants_attractions = st.checkbox("Show Restaurants & Attractions") # Choose to see restaurants_attractions
+#show_restaurants_attractions = st.checkbox("Show Restaurants & Attractions") # Choose to see restaurants_attractions
 
 m = folium.Map(location=[41.3879, 2.1699], zoom_start=12)
-if show_restaurants_attractions:
-    min_rating = st.slider("🧹 Filter by Minimum Rating", min_value=0, max_value=10, value=5)
-    filtered_locations = filtered_locations.filter(filtered_locations['avg_rating'] >= min_rating)
-    
-    # Adds markers for restaurants and attractions to the map
-    for row in filtered_locations.collect():
-        emoji = "🍽️" if row['type'] == "restaurant" else "📌"
-        popup_content = popup_content_review(row, df_reviews, emoji)
-        folium.Marker(
-            location=[row['latitude'], row['longitude']],
-            popup=folium.Popup(popup_content, max_width=600),  # Popup con nombre y tipo
-            tooltip=f"{emoji} {row['type']} ",
-            icon=folium.Icon(color=colors.get(row['neighbourhood'], 'gray'), icon=location_icons.get(row['type']))
-        ).add_to(m)
 
-    st.markdown(f'''
-    <div style="
-        border-radius: 10px;
-        border: 2px solid #a26464;
-        padding: 15px;
-        margin-top: 5px;
-        margin-bottom: 5px;
-        font-size: 16px;
-        color: #a26464;
-        background-color: #ffffff;
-        box-shadow: 2px 2px 12px rgba(0,0,0,0.1);">
-        <b>Displayed Restaurants </b> {filtered_locations.filter(filtered_locations['type'] == 'restaurant').count()}<br>
-        <b>Displayed Attractions </b> {filtered_locations.filter(filtered_locations['type'] == 'attraction').count()}
-    </div>
-    ''', unsafe_allow_html=True)
-
-for row in filtered_data.collect():
-    neighbourhood = row['neighbourhood']
+for _, row in df_filtered_apartments.iterrows():
+    neighbourhood = row['district'].split('/')[-1].replace('_', ' ')
     marker_color = colors.get(neighbourhood, 'gray')
-    description = '🏠 ' + row['property_type'] + '\n\n' + 'Price ' + str(row['price']) + " €"
+    description = f"🏠 {row['room_type']}\n\nPrice {row['price']} €"
 
-    popup_content = """
-                    <p>{summary}</p>
-                    <b>🌟 Review Score: {review_scores_rating}<b>
-                    <p>💲 Price: {price} €</p>
-                    <p>🔒 Security Deposit: {security_deposit} €</p>
-                    <p>🧹 Cleaning Fee: {cleaning_fee} €</p>
-                    <p>🚽 Bathrooms: {bathrooms}</p>
-                    <p>🛌 Beds: {beds}</p>
-                    <p>    ➡️ Type: {bed_type}</p>
-                    """.format(
-                        summary='🏠 ' + row['Name'],
-                        review_scores_rating=int(row['review_scores_value']),
-                        price=row['price'],
-                        security_deposit=row['security_deposit'],
-                        cleaning_fee=row['cleaning_fee'],
-                        bathrooms=row['bathrooms'],
-                        beds=row['beds'],
-                        bed_type=row['bed_type']
-                    )
-    # Create the marker on with the specified color
+    popup_content = f"""
+        <p>🏠 {row['name']}</p>
+        <b>💲 Price: {row['price']} €</b><br>
+        <p>🚽 Bathrooms: {row['bathrooms']}</p>
+        <p>🛌 Beds: {row['beds']}</p>
+        <p>➡️ Type: {row['bed_type']}</p>
+    """
+
     folium.Marker(
         location=[row['latitude'], row['longitude']],
-        popup = folium.Popup(popup_content, max_width=300),
+        popup=folium.Popup(popup_content, max_width=300),
         tooltip=f"{description}",
         icon=folium.Icon(color=marker_color, icon='home', prefix='fa')
     ).add_to(m)
+
 # Show the map
 folium_static(m)
 
 
-# Crime Analysis: Processes crime data to display statistics about the types of crimes in selected neighborhoods
-top_crimes_by_neighborhood, total_crimes_all_neighborhoods = criminal_implementation(df_criminal, selected_neighborhoods)
 
-# Displays crime statistics and identifies neighborhoods with highest crime rates
-st.subheader("Top 5 Crime Types by Neighborhood")
-if not top_crimes_by_neighborhood.empty:
-    grouped = top_crimes_by_neighborhood.groupby('area_basica_policial')
-    neighborhoods = list(grouped.groups.keys())
-    highest_risk_neighborhood = None
-    highest_crime_ratio = 0
-    for i in range(0, len(neighborhoods), 2):
-        cols = st.columns(2)
-        for j in range(2):
-            if i + j < len(neighborhoods):
-                name = neighborhoods[i + j]
-                group = grouped.get_group(name)
-                with cols[j]:
-                    st.markdown(f"###### 📍 {name}")
-                    display_group = group[['ambit_fet', 'percentage']].copy()
-                    display_group = display_group.rename(columns={'ambit_fet': 'Crimes', 'percentage': 'Percentage'})
-                    st.dataframe(display_group.sort_values(by='Percentage', ascending=False).head(5).set_index('Crimes'))
-                    total_crimes_neighborhood = group['total_count'].iloc[0]
-                    crime_ratio = total_crimes_neighborhood / total_crimes_all_neighborhoods
-                    st.markdown(f"**Crime Ratio**  {crime_ratio:.2f}")
-
-                    if crime_ratio > highest_crime_ratio:
-                        highest_crime_ratio = crime_ratio
-                        highest_risk_neighborhood = name
-
-    if highest_risk_neighborhood:
-        st.markdown(f'<div style="background-color: #FFCCCC; color: maroon; padding: 10px; border-radius: 10px; border: 2px solid maroon; font-size: 20px;"><span style="font-size: 24px;">⚠️</span> <strong>Highest Risk Neighborhood:</strong> {highest_risk_neighborhood}</div>', unsafe_allow_html=True)
-else:
-    st.write("No criminality data available.")
 
 
 
