@@ -70,6 +70,9 @@ torch==2.2.2
 torchkge==0.17.7
 tornado @ file:///Users/runner/miniforge3/conda-bld/tornado_1708363373751/work
 tqdm==4.66.4
+folium
+streamlit
+streamlit_folium
 traitlets @ file:///home/conda/feedstock_root/build_artifacts/traitlets_1713535121073/work
 typing_extensions==4.12.0
 tzdata==2024.1
