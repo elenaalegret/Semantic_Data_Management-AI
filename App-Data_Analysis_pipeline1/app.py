@@ -67,9 +67,8 @@ with st.sidebar.expander(" 🧹 Apartments Filtration"):
         beds_min = None
         min_nights = None
 
-# -->  Call the query fucntion
+# -->  Call the query fucntion for Apartments
 df_filtered_apartments = filter_apartments(selected_neighborhoods, price_max, selected_room_types, bathrooms_min, beds_min, min_nights, num_samples)
-
 
 
 # Display the number of apartments & Locations
@@ -88,10 +87,48 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-# Map visualization: Configures and displays a map with markers for Airbnb listings and optionally restaurants/attractions
-#show_restaurants_attractions = st.checkbox("Show Restaurants & Attractions") # Choose to see restaurants_attractions
+
+#################################
+##      Map visualization.    ###
+#################################
+#  Configures and displays a map with markers for Airbnb listings and optionally restaurants/attractions
+show_restaurants_attractions = st.checkbox("Show Restaurants & Attractions") # Choose to see restaurants_attractions
 
 m = folium.Map(location=[41.3879, 2.1699], zoom_start=12)
+if show_restaurants_attractions:
+
+    min_rating = st.slider("🧹 Filter by Minimum Rating", min_value=0, max_value=5, value=5)
+
+    # -->  Call the query fucntion for Locations
+    filtered_locations = filter_locations(selected_neighborhoods, min_rating, num_samples)
+    
+    # Adds markers for restaurants and attractions to the map
+    for _, row in filtered_locations.iterrows():
+        neighbourhood = str(row['district']).split('/')[-1].replace('_', ' ')
+        emoji = "🍽️" if row['type'] == "restaurant" else "📌"
+        popup_content = popup_content_review(row['location_id'], emoji, row['name'], row['avgrating'])
+        folium.Marker(
+            location=[row['latitude'], row['longitude']],
+            popup=folium.Popup(popup_content, max_width=600),  # Popup con nombre y tipo
+            tooltip=f"{emoji} {row['type']} ",
+            icon=folium.Icon(color=colors.get(neighbourhood, 'gray'), icon=location_icons.get(row['type']))
+        ).add_to(m)
+
+    st.markdown(f'''
+    <div style="
+        border-radius: 10px;
+        border: 2px solid #a26464;
+        padding: 15px;
+        margin-top: 5px;
+        margin-bottom: 5px;
+        font-size: 16px;
+        color: #a26464;
+        background-color: #ffffff;
+        box-shadow: 2px 2px 12px rgba(0,0,0,0.1);">
+        <b>Displayed Restaurants </b> {filtered_locations[filtered_locations['type'] == 'restaurant'].shape[0]}<br>
+        <b>Displayed Attractions </b> {filtered_locations[filtered_locations['type'] == 'attraction'].shape[0]}
+    </div>
+    ''', unsafe_allow_html=True)
 
 for _, row in df_filtered_apartments.iterrows():
     neighbourhood = row['district'].split('/')[-1].replace('_', ' ')

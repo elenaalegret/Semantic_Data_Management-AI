@@ -105,11 +105,90 @@ def filter_apartments(neighborhoods, price_max=None, selected_room_types=None, b
     return df_filtered_apartments
 
 
+def filter_locations(neighborhoods, min_rating=None, num_samples=None):
+    #  SPARQL dynamic query
+    query = """
+    PREFIX ent: <http://example.org/entertainment/>
+    PREFIX loc: <http://example.org/location/>
+
+    SELECT ?location_id ?name ?location ?type ?district ?latitude ?longitude ?avgrating
+    WHERE {
+        ?entertainment ent:locationID ?location_id .
+        ?entertainment ent:name ?name .
+        ?entertainment ent:typeEnt ?type .
+        ?entertainment ent:avgrating ?avgrating .
+        ?entertainment ent:hasLocation ?location .
+        ?location loc:latitude ?latitude .
+        ?location loc:longitude ?longitude .
+        ?location loc:isinDistrict ?district .
+    """
+
+    selected_neighborhoods = [neigh for neigh, selected in neighborhoods.items() if selected]
+    if selected_neighborhoods:
+        neighborhoods_filter = " || ".join([f'?district = loc:{neigh.replace(" ", "_")}' for neigh in selected_neighborhoods])
+        query += f"FILTER ({neighborhoods_filter}) .\n"
+    
+    else:
+        query += "FILTER (?isinDistrict = 0) .\n"  # Impossible filter
+
+
+    if min_rating is not None:
+        query += f"FILTER (?avgrating >= {min_rating}) .\n"
+
+    query += "}"
+    
+    results = g.query(query)
+ 
+    df_filtered_locations = pd.DataFrame(results, columns=results.vars)
+
+    if num_samples:
+        df_filtered_locations = df_filtered_locations.sample(frac=num_samples / 100, random_state=42)
+
+    df_filtered_locations.columns = df_filtered_locations.columns.str.strip()
+    df_filtered_locations['type'] = df_filtered_locations['type'].apply(lambda x: str(x))
+    return df_filtered_locations
+
+
+
 # Helper Function: Encoding binary files to base64 for embedding images or files in HTML outputs
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
+
+def popup_content_review(id, emoji, name, avg_rating):
+    # Construir la consulta SPARQL
+    query = f"""
+    PREFIX ent: <http://example.org/entertainment/>
+    PREFIX loc: <http://example.org/location/>
+
+    SELECT ?locationid ?rating ?text ?title 
+    WHERE {{
+        ?entertainment ent:locationID ?locationid .
+        ?entertainment ent:rating ?rating .
+        ?entertainment ent:text ?text .
+        ?entertainment ent:title ?title .
+        FILTER(?locationid = {id}) .
+    }}
+    LIMIT 1
+    """
+  
+    results = g.query(query)
+    results = pd.DataFrame(results, columns=results.vars)
+    results.columns = results.columns.str.strip()
+
+    review = results.iloc[0]
+    popup_content = f"""
+    <h3> {emoji} {name}</h3>
+    <h4>🌟 Average Rating = {avg_rating}</h4>
+
+    <p>(👤 Random Reviewer)<p>
+    <strong>Rating: </strong>{review['rating']}</p>
+    <p><strong>💬 {str(review['title'])}</strong></p>
+    <p><strong>Text: </strong>{str(review['text'])}</p>
+    """
+   
+    return popup_content
 
 
 
